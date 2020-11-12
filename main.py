@@ -1,7 +1,9 @@
 import argparse
 import os
+import time
 
 import pykube
+from jinja2 import Template
 
 
 def get_kube_api():
@@ -53,4 +55,20 @@ if __name__ == "__main__":
     api = get_kube_api()
     all_nodes = get_nodes(api, include_master_nodes)
     print(all_nodes)
-    
+
+    HA_PROXY_CONFIG_FILE = "/etc/haproxy/haproxy.cfg"
+
+    last_nodes = []
+
+    while True:
+        time.sleep(120)
+        all_nodes = get_nodes(api, include_master_nodes)
+        if(set(all_nodes) != set(last_nodes)):
+            with open('haproxy.cfg.jinja2') as file_:
+                template = Template(file_.read())
+            template.render(nodes = all_nodes)
+
+            with open("haproxy.cfg", "w") as f:
+                f.write(template)
+
+        last_nodes = all_nodes
